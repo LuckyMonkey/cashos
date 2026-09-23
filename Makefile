@@ -7,7 +7,7 @@ IMAGE := $(BUILD_DIR)/register.img
 APP_SECTORS := 64
 APP_BYTES := $(shell echo $$(( $(APP_SECTORS) * 512 )))
 
-.PHONY: all image run debug smoke disasm hex size layout journal journal-test journal-corrupt-test check clean watch
+.PHONY: all image run debug smoke disasm hex size layout journal journal-test journal-corrupt-test check web web-serve clean watch
 
 all: image
 
@@ -27,6 +27,27 @@ image: $(IMAGE)
 
 $(IMAGE): $(BUILD_DIR)/boot.bin $(BUILD_DIR)/cashos.bin scripts/mkimage.sh include/disk_layout.inc
 	./scripts/mkimage.sh $(IMAGE) $(BUILD_DIR)/boot.bin $(BUILD_DIR)/cashos.bin $(APP_SECTORS)
+
+WEB_SITE := $(BUILD_DIR)/site
+
+web: $(WEB_SITE)/register.img
+	@test -s $(WEB_SITE)/index.html
+	@test -s $(WEB_SITE)/v86/libv86.js
+	@test -s $(WEB_SITE)/v86/v86.wasm
+	@test -s $(WEB_SITE)/bios/seabios.bin
+	@test -s $(WEB_SITE)/bios/vgabios.bin
+	@test "$$(stat -c %s $(WEB_SITE)/register.img)" -eq 1474560
+	@echo "web site ready at $(WEB_SITE)/"
+
+$(WEB_SITE)/register.img: $(IMAGE) web/index.html web/app.js web/style.css web/README.md scripts/prepare-v86.sh
+	rm -rf $(WEB_SITE)
+	mkdir -p $(WEB_SITE)
+	cp web/index.html web/app.js web/style.css web/README.md $(WEB_SITE)/
+	cp $(IMAGE) $(WEB_SITE)/register.img
+	sh scripts/prepare-v86.sh $(WEB_SITE)
+
+web-serve: web
+	python3 -m http.server 8000 --directory $(WEB_SITE)
 
 run: image
 	./scripts/run-qemu.sh $(IMAGE)

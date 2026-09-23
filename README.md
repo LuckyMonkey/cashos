@@ -22,6 +22,10 @@ Transactions are persisted as fixed 32-byte records beginning at LBA 128. Use `m
 
 `make check` runs the boot smoke test, two-boot persistence test, checksum-corruption test, disassembly, and size checks.
 
+## Browser demo
+
+`make web` builds a static site around the same `build/register.img`; it does not reimplement CashOS in JavaScript. `make web-serve` serves the result at `http://localhost:8000/`. Open it over HTTP, click the emulator, and use the normal register keyboard controls. The site uses pinned v86 assets and the actual CashOS floppy image. Browser-session floppy writes are not persisted across refreshes yet.
+
 ## Physical floppy warning
 
 `scripts/write-floppy.sh` requires an explicit block-device path and the exact confirmation `CASHOS-WRITE`. It is intentionally not part of a normal build. Verify the target with `lsblk` before allowing the write.

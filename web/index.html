@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CashOS — Bare-Metal Floppy Register</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="page">
+    <header>
+      <p class="eyebrow">CASHOS</p>
+      <h1>Bare-Metal Floppy Register</h1>
+      <p class="lede">Booting the real CashOS 1.44 MB floppy image in your browser.</p>
+    </header>
+
+    <section class="emulator-panel" aria-label="CashOS emulator">
+      <div id="screen_container" class="screen" tabindex="0">
+        <div class="screen-text"></div>
+        <canvas class="screen-canvas"></canvas>
+      </div>
+      <p id="status" class="status" role="status">Loading v86 and CashOS floppy...</p>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <nav class="controls" aria-label="Emulator controls">
+      <button id="reset" type="button">Reset</button>
+      <button id="fullscreen" type="button">Fullscreen</button>
+      <a class="button" href="./register.img" download="cashos-register.img">Download Floppy</a>
+    </nav>
+
+    <p class="hint">Click the register to capture the keyboard. Try <code>1</code>–<code>4</code>, <code>L</code> plus a PLU, <code>V</code>, <code>C</code>, or Enter.</p>
+    <p class="note">This is the actual CashOS floppy running in v86 — no DOS and no Linux guest. Browser-session floppy writes are not saved across refreshes.</p>
+  </main>
+  <script src="./v86/libv86.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

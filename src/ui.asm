@@ -37,15 +37,30 @@ draw_register:
     mov dl, 0
     mov bl, COLOR_ACCENT
     call vga_write_at
+    mov si, register_icon_1
+    mov dh, 1
+    mov dl, 3
+    mov bl, COLOR_TOTAL
+    call vga_write_at
     mov si, title
     mov dh, 1
-    mov dl, 29
+    mov dl, 15
     mov bl, COLOR_TITLE
     call vga_write_at
     mov si, register_label
     mov dh, 2
-    mov dl, 32
-    mov bl, COLOR_TITLE
+    mov dl, 15
+    mov bl, COLOR_ACCENT
+    call vga_write_at
+    mov si, online_label
+    mov dh, 2
+    mov dl, 65
+    mov bl, COLOR_SUCCESS
+    call vga_write_at
+    mov si, register_icon_2
+    mov dh, 2
+    mov dl, 3
+    mov bl, COLOR_ACCENT
     call vga_write_at
     mov si, line_mid
     mov dh, 3
@@ -56,6 +71,10 @@ draw_register:
     mov dh, 4
     mov dl, 2
     mov bl, COLOR_ACCENT
+    call vga_write_at
+    mov si, sale_header
+    mov dl, 60
+    mov bl, COLOR_TITLE
     call vga_write_at
     mov si, product_1
     mov dh, 5
@@ -80,6 +99,21 @@ draw_register:
     mov dh, 11
     mov dl, 2
     mov bl, COLOR_TITLE
+    call vga_write_at
+    mov si, sale_items_label
+    mov dh, 11
+    mov dl, 45
+    mov bl, COLOR_NORMAL
+    call vga_write_at
+    mov ax, [item_count]
+    mov dh, 11
+    mov dl, 58
+    mov bl, COLOR_HIGHLIGHT
+    call write_number_at
+    mov si, sale_items_suffix
+    mov dh, 11
+    mov dl, 60
+    mov bl, COLOR_NORMAL
     call vga_write_at
     call draw_payment_mode
     mov si, item_count_label
@@ -121,6 +155,11 @@ draw_register:
     mov dl, 11
     mov bl, COLOR_NORMAL
     call write_number_at
+    mov si, entry_header
+    mov dh, 14
+    mov dl, 45
+    mov bl, COLOR_ACCENT
+    call vga_write_at
     mov si, entry_label
     cmp byte [input_mode], 3
     je .plu_label
@@ -128,6 +167,10 @@ draw_register:
     je .barcode_label
     cmp byte [input_mode], 5
     je .tax_label
+    cmp byte [input_mode], 1
+    je .price_label
+    cmp byte [input_mode], 2
+    je .quantity_label
     jmp .entry_label_ready
 .plu_label:
     mov si, plu_entry_label
@@ -137,10 +180,16 @@ draw_register:
     jmp .entry_label_ready
 .tax_label:
     mov si, tax_entry_label
+    jmp .entry_label_ready
+.price_label:
+    mov si, price_entry_label
+    jmp .entry_label_ready
+.quantity_label:
+    mov si, quantity_entry_label
 .entry_label_ready:
     mov dh, 15
     mov dl, 2
-    mov bl, COLOR_NORMAL
+    mov bl, COLOR_HIGHLIGHT
     call vga_write_at
     cmp byte [input_mode], 4
     je .draw_barcode_value
@@ -154,14 +203,14 @@ draw_register:
     mov si, money_buffer
     mov dh, 15
     mov dl, 58
-    mov bl, COLOR_NORMAL
+    mov bl, COLOR_HIGHLIGHT
     call vga_write_at
     jmp .entry_value_done
 .draw_numeric_value:
     mov eax, [entry_value]
     mov dh, 15
     mov dl, 58
-    mov bl, COLOR_NORMAL
+    mov bl, COLOR_HIGHLIGHT
     mov di, number_buffer
     call format_u32
     mov si, number_buffer
@@ -171,7 +220,7 @@ draw_register:
     mov si, barcode_buffer
     mov dh, 15
     mov dl, 58
-    mov bl, COLOR_NORMAL
+    mov bl, COLOR_HIGHLIGHT
     call vga_write_at
 .entry_value_done:
     mov si, line_mid
@@ -195,9 +244,10 @@ draw_register:
     mov si, tax_label
     mov dh, 19
     mov dl, 2
-    mov bl, COLOR_NORMAL
+    mov bl, COLOR_HIGHLIGHT
     call vga_write_at
     mov al, [tax_rate_percent]
+    mov dl, 7
     call write_percent_at
     call calculate_sale_tax
     mov di, money_buffer
@@ -334,9 +384,9 @@ draw_payment_mode:
     jne .show
     mov si, payment_card_label
 .show:
-    mov dh, 11
+    mov dh, 12
     mov dl, 45
-    mov bl, COLOR_ACCENT
+    mov bl, COLOR_HIGHLIGHT
     jmp vga_write_at
 
 ; IN: AX=zero-based product index.
@@ -784,8 +834,12 @@ validate_payment:
 
 line_top         db '+------------------------------------------------------------------------------+', 0
 line_mid         db '+------------------------------------------------------------------------------+', 0
-title            db 'CASHOS', 0
-register_label   db 'REGISTER 01', 0
+register_icon_1  db ' ', 0xDB, 0xDB, 0xDB, 0xDB, 0xDB, ' ', 0
+register_icon_2  db ' ', 0xDB, ' ', 0xDB, ' ', 0xDB, ' ', 0
+title            db 'C A S H O S', 0
+register_label   db 'REGISTER 01  |  FRONT LANE', 0
+online_label     db '[ ONLINE ]', 0
+sale_header      db 'CURRENT SALE', 0
 product_1        db '1  COFFEE                                      $3.25', 0
 product_2        db '2  BAGEL                                       $2.50', 0
 product_3        db '3  WATER                                       $1.50', 0
@@ -795,23 +849,29 @@ payment_cash_label db 'PAY: CASH', 0
 payment_ebt_label db 'PAY: EBT', 0
 payment_card_label db 'PAY: CARD', 0
 item_count_label db 'ITEMS: ', 0
-total_label      db 'TOTAL', 0
-help_text        db '1-4 ADD  L PLU  B BARCODE  P PRICE  T TAX%  X QTY', 0
-help_text_2      db '+ ADD  - SUB  V VOID  C CLEAR  R RESCAN  ENTER SALE', 0
+sale_items_label db 'ITEM COUNT:', 0
+sale_items_suffix db ' ITEM(S)', 0
+total_label      db '[ TOTAL DUE ]', 0
+help_text        db '[1-4] ADD  [L] PLU  [B] UPC  [P] PRICE  [T] TAX  [X] QTY', 0
+help_text_2      db '[+] ADD  [-] SUB  [V] VOID  [C] CLEAR  [R] RESCAN  [ENTER] PAY', 0
 entry_label      db 'ENTRY', 0
 plu_entry_label  db 'PLU:', 0
 barcode_entry_label db 'UPC:', 0
 tax_entry_label   db 'TAX %:', 0
+price_entry_label db 'PRICE (CENTS):', 0
+quantity_entry_label db 'QUANTITY:', 0
+ready_entry      db 'READY - PRESS A KEY', 0
 last_tx_label    db 'LAST TX:', 0
 next_tx_label    db 'NEXT TX:', 0
 produce_label    db 'PRODUCE: L=PLU   B=BARCODE   T=TAX   P=PRICE', 0
+entry_header     db 'ENTRY / SCANNER', 0
 subtotal_label   db 'SUBTOTAL', 0
 tax_label        db 'TAX', 0
 percent_suffix   db '%', 0
 invalid_plu_message db 'UNKNOWN PRODUCE PLU', 0
 invalid_barcode_message db 'UNKNOWN UPC', 0
 payment_error_message db 'ITEM NOT EBT ELIGIBLE', 0
-version_text     db 'CASHOS 0.1.0  |  REAL MODE  |  FLOPPY REGISTER', 0
+version_text     db 'CASHOS 0.1.0  |  REAL MODE  |  1.44MB FLOPPY', 0
 small_number     db '0', 0
 debug_add        db 'ADD_ITEM=', 0
 debug_amount     db 'ADD_AMOUNT=', 0

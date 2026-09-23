@@ -26,13 +26,14 @@ vga_write_at:
     mov ax, VGA_SEGMENT
     mov es, ax
     mov [vga_attribute], bl
+    ; MUL writes DX, so calculate the column offset before using DH/DL for the row.
+    xor bx, bx
+    mov bl, dl
+    shl bx, 1
     xor ax, ax
     mov al, dh
     mov cx, 160
     mul cx
-    xor bh, bh
-    mov bl, dl
-    shl bx, 1
     add ax, bx
     mov di, ax
 .next:

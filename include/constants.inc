@@ -11,5 +11,9 @@
 %define COLOR_NORMAL      0x07
 %define COLOR_TITLE       0x0F
 %define COLOR_ACCENT      0x0B
-%define COLOR_TOTAL       0x0E
-
+%define COLOR_TOTAL       0x1E
+%define COLOR_DIM         0x08
+%define COLOR_SUCCESS     0x0A
+%define COLOR_WARNING     0x0C
+%define COLOR_PANEL       0x03
+%define COLOR_HIGHLIGHT   0x70

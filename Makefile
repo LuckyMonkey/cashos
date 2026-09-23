@@ -7,7 +7,7 @@ IMAGE := $(BUILD_DIR)/register.img
 APP_SECTORS := 64
 APP_BYTES := $(shell echo $$(( $(APP_SECTORS) * 512 )))
 
-.PHONY: all image run debug smoke disasm hex size layout journal journal-test journal-corrupt-test check web web-serve clean watch
+.PHONY: all image run debug smoke qemu-screenshot disasm hex size layout journal journal-test journal-corrupt-test check web web-serve clean watch
 
 all: image
 
@@ -63,6 +63,14 @@ debug: image
 
 smoke: image
 	./scripts/smoke-qemu.sh $(IMAGE)
+
+qemu-screenshot: image
+	@mkdir -p docs/assets
+	@{ sleep 3; printf 'screendump build/cashos-qemu.ppm\n'; sleep 1; printf 'quit\n'; } | timeout 12s $(QEMU) -machine pc -m 64M -drive file=$(IMAGE),format=raw,if=floppy -boot order=a -display none -monitor stdio -debugcon file:build/cashos-screenshot-debug.log -global isa-debugcon.iobase=0xe9 >/dev/null 2>&1 || true
+	@test -s build/cashos-qemu.ppm
+	@command -v convert >/dev/null || { echo 'qemu-screenshot requires ImageMagick (convert)'; exit 1; }
+	@convert build/cashos-qemu.ppm docs/assets/cashos-qemu.png
+	@echo 'wrote docs/assets/cashos-qemu.png'
 
 disasm: $(BUILD_DIR)/boot.bin $(BUILD_DIR)/cashos.bin
 	@$(NDISASM) -b 16 $(BUILD_DIR)/boot.bin > $(BUILD_DIR)/boot.dis

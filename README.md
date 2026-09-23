@@ -1,35 +1,132 @@
-# CashOS
+# 🧾 CashOS
 
-CashOS is a deliberately tiny bare-metal x86 cash register. The guest is a flat floppy image containing a 16-bit boot sector and a fixed-sector NASM real-mode application. Linux is used only on the development host for building and running QEMU; it is not present in `register.img`.
+![CashOS running in QEMU](docs/assets/cashos-qemu.png)
 
-## Prerequisites
+[![Pages](https://github.com/LuckyMonkey/cashos/actions/workflows/pages.yml/badge.svg)](https://github.com/LuckyMonkey/cashos/actions/workflows/pages.yml)
+[![License](https://img.shields.io/github/license/LuckyMonkey/cashos)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/LuckyMonkey/cashos)](https://github.com/LuckyMonkey/cashos/commits/master)
+[![GitHub stars](https://img.shields.io/github/stars/LuckyMonkey/cashos?style=flat)](https://github.com/LuckyMonkey/cashos/stargazers)
 
-On Debian/Ubuntu/Xubuntu, run `./scripts/bootstrap-debian.sh` to print the required packages (or install them when run as root). The important tools are NASM, GNU Make, QEMU, binutils, GDB multiarch, and ordinary shell utilities.
+> **GitHub Pages is serving a floppy.** The browser emulates the PC, the floppy contains CashOS, and CashOS boots directly into the register. 🖥️💾
 
-## Build and run
+CashOS is a deliberately tiny bare-metal x86 cash register. It boots from a standard 1.44 MB floppy image, runs as 16-bit NASM real-mode code, writes directly to VGA text memory, reads the keyboard through the BIOS, and stores completed transactions in raw floppy sectors.
 
-```sh
-make
-make smoke
-make run
+There is no Linux or DOS inside the guest. Linux is only the host development environment used to assemble, inspect, test, and run the image.
+
+## 🚀 Try the browser demo
+
+**[▶️ Open CashOS in your browser](https://luckymonkey.github.io/cashos/)**
+
+The demo runs the same `build/register.img` produced by this repository inside [v86](https://github.com/copy/v86). Click the CRT screen to capture the keyboard. The browser shell is only a launchpad around the emulator; it does not recreate the register UI.
+
+## ✨ What is working
+
+- 🥾 BIOS → boot sector → fixed-sector stage two
+- 🧮 Integer-cent arithmetic with custom prices, quantities, tax, void, clear, and payment modes
+- 🏷️ Catalog items with store SKU, UPC, PLU, department, tax class, and payment flags
+- 🍎 Produce PLUs loaded from editable CSV data
+- 💾 Persistent 32-byte transaction records in raw floppy sectors
+- 🖥️ Direct 80×25 VGA text output
+- ⌨️ BIOS keyboard input plus UPC/barcode entry mode
+- 🧪 QEMU smoke tests, journal persistence tests, binary inspection, and size checks
+- 🌐 Static v86 browser emulator deployed through GitHub Pages
+
+## 🧭 The machine path
+
+```text
+power on
+   ↓
+PC BIOS
+   ↓
+LBA 0: src/boot.asm
+   ↓
+LBA 1–64: CashOS stage two
+   ↓
+16-bit real-mode register
+   ├── VGA text memory at 0xB8000
+   ├── BIOS keyboard INT 16h
+   ├── BIOS floppy reads/writes INT 13h
+   └── journal records at LBA 128+
 ```
 
-`make smoke` runs QEMU headlessly for five seconds and checks the debug port for `CASHOS_READY`. `make run` opens the VGA window. Press `1`–`4` to add catalog products, `L` then digits to enter a produce PLU, `B` then a 12-digit UPC for barcode mode, `P` then cents for a custom price, `T` then a whole-number tax percentage, and `X` then a quantity. `E` selects EBT in normal mode or clears an entry, `K` selects card, `N` selects cash, `V` voids, `C` clears the sale, `R` rescans the journal, and Enter commits an entry or completes a sale. Department, tax, payment, SKU, and UPC fields live in `data/catalog.csv`; produce PLUs and their CashOS-local prices are listed in `data/fruit_plu.csv`.
+## 🎛️ Register controls
 
-Useful inspection targets are `make size`, `make layout`, `make disasm`, and `make hex`. `make debug` starts QEMU paused with its GDB stub on TCP port 1234; connect with `gdb-multiarch` as described in HACKING.md.
+| Keys | Action |
+| --- | --- |
+| `1`–`4` | Add a catalog item |
+| `L` + PLU + `Enter` | Add a produce item |
+| `B` + 12-digit UPC + `Enter` | Scan/add a barcode item |
+| `P` + cents + `Enter` | Add a custom cash-only price |
+| `T` + percentage + `Enter` | Set the sale tax rate |
+| `X` + quantity + `Enter` | Set quantity for the next item |
+| `E` / `K` / `N` | EBT / card / cash payment mode |
+| `V` / `C` | Void the last item / clear the sale |
+| `R` | Rescan the transaction journal |
+| `Enter` | Commit the current sale |
 
-Transactions are persisted as fixed 32-byte records beginning at LBA 128. Use `make journal` to build the Linux-side inspector. Use `make clean && make journal-test` to boot the same writable image twice and verify two completed sales remain after reboot.
+## 🧰 Build and run locally
 
-`make check` runs the boot smoke test, two-boot persistence test, checksum-corruption test, disassembly, and size checks.
+```sh
+./scripts/bootstrap-debian.sh   # print/install Debian or Ubuntu prerequisites
+make                            # build build/register.img
+make smoke                      # boot headlessly and check CASHOS_READY
+make run                        # open the QEMU VGA window
+make qemu-screenshot             # refresh this real-QEMU screenshot
+make check                      # build, smoke-test, persistence-test, inspect
+```
 
-## Browser demo
+Useful inspection commands:
 
-`make web` builds a static site around the same `build/register.img`; it does not reimplement CashOS in JavaScript. `make web-serve` serves the result at `http://localhost:8000/`. Open it over HTTP, click the emulator, and use the normal register keyboard controls. The site uses pinned v86 assets and the actual CashOS floppy image. Browser-session floppy writes are not persisted across refreshes yet.
+```sh
+make size
+make layout
+make disasm
+make hex
+make journal
+```
 
-The live emulator is at [luckymonkey.github.io/cashos](https://luckymonkey.github.io/cashos/), and the source is at [github.com/LuckyMonkey/cashos](https://github.com/LuckyMonkey/cashos).
+`make debug` starts QEMU paused with a GDB stub on port 1234. See [HACKING.md](HACKING.md) for the real-mode debugging workflow.
 
-## Physical floppy warning
+## 📦 Editable catalog data
 
-`scripts/write-floppy.sh` requires an explicit block-device path and the exact confirmation `CASHOS-WRITE`. It is intentionally not part of a normal build. Verify the target with `lsblk` before allowing the write.
+The source-of-truth catalog is [data/catalog.csv](data/catalog.csv). Produce PLUs are in [data/fruit_plu.csv](data/fruit_plu.csv). The build converts those tables into NASM include files under `build/`; the floppy contains the generated assembly data, not a guest filesystem.
 
-Persistence, FAT12, protected mode, C, LVGL, networking, printers, and other platform services are future work.
+Department codes and tax/payment rules live with each item so the register can reject an incompatible payment method, such as EBT for a non-eligible department.
+
+## 🌐 Browser development
+
+```sh
+make web
+make web-serve
+```
+
+Then open `http://localhost:8000/`. Serve over HTTP rather than `file://` so the browser can load WebAssembly and emulator assets. Browser-session floppy writes are not persisted across refreshes yet.
+
+## 🗂️ Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `src/` | Bootloader and modular real-mode assembly |
+| `include/` | Hardware and disk constants |
+| `data/` | Human-editable catalog and PLU tables |
+| `scripts/` | Image building, QEMU, tests, and data import |
+| `tools/` | Host-side journal inspection |
+| `web/` | Static v86 wrapper and CRT-style shell |
+| `docs/` | Memory map and project screenshots |
+
+## 🗺️ Next on the roadmap
+
+The intentionally small foundation leaves room for an admin floppy that edits catalog data, employee-register update media, richer department policy, journal recovery, and eventually a protected-mode/freestanding-C layer. Those are future milestones—not hidden dependencies in the current image.
+
+## ⚠️ Physical floppy warning
+
+Use `scripts/write-floppy.sh` only with an explicit device path after checking `lsblk`. It requires the exact confirmation `CASHOS-WRITE` and is never part of a normal build.
+
+## 📚 Learn the details
+
+- [Architecture](ARCHITECTURE.md)
+- [Hacking guide](HACKING.md)
+- [Disk layout](DISK_LAYOUT.md)
+- [Memory map](docs/memory-map.md)
+- [Browser demo notes](web/README.md)
+- [GitHub project](https://github.com/LuckyMonkey/cashos)

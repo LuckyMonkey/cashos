@@ -20,7 +20,10 @@ $(BUILD_DIR)/boot.bin: src/boot.asm include/constants.inc include/disk_layout.in
 $(BUILD_DIR)/fruit_plu.inc: data/fruit_plu.csv scripts/import-plu.sh | $(BUILD_DIR)
 	sh scripts/import-plu.sh $< $@
 
-$(BUILD_DIR)/cashos.bin: src/main.asm src/vga.asm src/keyboard.asm src/products.asm src/money.asm src/ui.asm src/disk.asm src/journal.asm data/fruit_plu.csv $(BUILD_DIR)/fruit_plu.inc include/constants.inc include/disk_layout.inc include/macros.inc | $(BUILD_DIR)
+$(BUILD_DIR)/catalog.inc: data/catalog.csv scripts/import-catalog.sh | $(BUILD_DIR)
+	sh scripts/import-catalog.sh $< $@
+
+$(BUILD_DIR)/cashos.bin: src/main.asm src/vga.asm src/keyboard.asm src/products.asm src/money.asm src/ui.asm src/disk.asm src/journal.asm data/fruit_plu.csv data/catalog.csv $(BUILD_DIR)/fruit_plu.inc $(BUILD_DIR)/catalog.inc include/constants.inc include/disk_layout.inc include/macros.inc | $(BUILD_DIR)
 	$(NASM) -f bin -I src/ -I include/ -o $@ $<
 
 image: $(IMAGE)
@@ -36,13 +39,16 @@ web: $(WEB_SITE)/register.img
 	@test -s $(WEB_SITE)/v86/v86.wasm
 	@test -s $(WEB_SITE)/bios/seabios.bin
 	@test -s $(WEB_SITE)/bios/vgabios.bin
+	@test -s $(WEB_SITE)/assets/cash-register-pixel.png
 	@test "$$(stat -c %s $(WEB_SITE)/register.img)" -eq 1474560
 	@echo "web site ready at $(WEB_SITE)/"
 
-$(WEB_SITE)/register.img: $(IMAGE) web/index.html web/app.js web/style.css web/README.md scripts/prepare-v86.sh
+$(WEB_SITE)/register.img: $(IMAGE) web/index.html web/app.js web/style.css web/README.md web/assets/cash-register-pixel.png scripts/prepare-v86.sh
 	rm -rf $(WEB_SITE)
 	mkdir -p $(WEB_SITE)
 	cp web/index.html web/app.js web/style.css web/README.md $(WEB_SITE)/
+	mkdir -p $(WEB_SITE)/assets
+	cp web/assets/cash-register-pixel.png $(WEB_SITE)/assets/
 	cp $(IMAGE) $(WEB_SITE)/register.img
 	sh scripts/prepare-v86.sh $(WEB_SITE)
 

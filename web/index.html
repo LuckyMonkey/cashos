@@ -9,15 +9,36 @@
 <body>
   <main class="page">
     <header>
-      <p class="eyebrow">CASHOS</p>
-      <h1>Bare-Metal Floppy Register</h1>
+      <div class="brand">
+        <img src="./assets/cash-register-pixel.png" alt="Pixel-art cash register" width="88" height="88">
+        <div>
+          <p class="eyebrow">CASHOS</p>
+          <h1>Bare-Metal Floppy Register</h1>
+        </div>
+      </div>
       <p class="lede">Booting the real CashOS 1.44 MB floppy image in your browser.</p>
     </header>
 
     <section class="emulator-panel" aria-label="CashOS emulator">
-      <div id="screen_container" class="screen" tabindex="0">
-        <div class="screen-text"></div>
-        <canvas class="screen-canvas"></canvas>
+      <div class="register-machine">
+        <div class="machine-top">
+          <span class="machine-brand">CASHOS 80</span>
+          <span class="machine-led" aria-label="power indicator"></span>
+          <span class="machine-label">MODEL R-01 / FLOPPY SYSTEM</span>
+        </div>
+        <div class="crt-bezel">
+          <div class="crt-glass">
+            <div id="screen_container" class="screen" tabindex="0">
+              <div class="screen-text"></div>
+              <canvas class="screen-canvas"></canvas>
+            </div>
+            <div class="scanlines" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="machine-controls" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <i></i><i></i><i></i>
+        </div>
       </div>
       <p id="status" class="status" role="status">Loading v86 and CashOS floppy...</p>
       <p id="error" class="error" role="alert" hidden></p>
@@ -29,8 +50,34 @@
       <a class="button" href="./register.img" download="cashos-register.img">Download Floppy</a>
     </nav>
 
+    <section class="quick-actions" aria-label="CashOS quick actions">
+      <h2>Quick register keys</h2>
+      <div class="action-grid">
+        <button data-key="1" type="button">1 Coffee</button>
+        <button data-key="2" type="button">2 Bagel</button>
+        <button data-key="3" type="button">3 Water</button>
+        <button data-key="4" type="button">4 Cookie</button>
+        <button data-key="l" type="button">L PLU</button>
+        <button data-key="b" type="button">B Barcode</button>
+        <button data-key="p" type="button">P Price</button>
+        <button data-key="t" type="button">T Tax</button>
+        <button data-key="e" type="button">E EBT</button>
+        <button data-key="k" type="button">K Card</button>
+        <button data-key="n" type="button">N Cash</button>
+        <button data-key="v" type="button">V Void</button>
+        <button data-key="c" type="button">C Clear</button>
+        <button data-enter type="button">Enter Complete</button>
+      </div>
+    </section>
+
     <p class="hint">Click the register to capture the keyboard. Try <code>1</code>–<code>4</code>, <code>L</code> plus a PLU, <code>V</code>, <code>C</code>, or Enter.</p>
     <p class="note">This is the actual CashOS floppy running in v86 — no DOS and no Linux guest. Browser-session floppy writes are not saved across refreshes.</p>
+    <section class="explain">
+      <h2>What you are running</h2>
+      <p>GitHub Pages hosts the emulator files and the generated floppy. v86 emulates the legacy PC: BIOS, CPU, RAM, VGA text memory, keyboard, and floppy controller. The guest then runs CashOS's own boot sector and 16-bit register code.</p>
+      <p>CashOS remains unaware of the web. The catalog source lives in <code>data/catalog.csv</code>; its SKU, UPC, department, tax class, and payment flags are compiled into the guest for now. A future admin floppy can edit the same record format.</p>
+    </section>
+    <footer><a href="https://github.com/LuckyMonkey/cashos">View the CashOS source on GitHub</a></footer>
   </main>
   <script src="./v86/libv86.js"></script>
   <script src="./app.js"></script>

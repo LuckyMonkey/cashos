@@ -68,5 +68,19 @@
     }
   });
 
+  document.querySelectorAll("[data-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!emulator) return;
+      emulator.keyboard_send_text(button.dataset.key);
+      screen.focus();
+    });
+  });
+
+  document.querySelector("[data-enter]").addEventListener("click", () => {
+    if (!emulator) return;
+    emulator.keyboard_send_scancodes([0x1c, 0x9c]);
+    screen.focus();
+  });
+
   start();
 })();

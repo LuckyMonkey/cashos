@@ -5,6 +5,14 @@ keyboard_wait:
     ret
 
 dispatch_key:
+    cmp al, 'b'
+    je .barcode_mode
+    cmp al, 'B'
+    je .barcode_mode
+    cmp al, 't'
+    je .tax_mode
+    cmp al, 'T'
+    je .tax_mode
     cmp al, 'l'
     je .plu_mode
     cmp al, 'L'
@@ -14,9 +22,17 @@ dispatch_key:
     cmp al, 'P'
     je .price_mode
     cmp al, 'e'
-    je .clear_entry
+    je .entry_or_ebt
     cmp al, 'E'
-    je .clear_entry
+    je .entry_or_ebt
+    cmp al, 'k'
+    je .card_mode
+    cmp al, 'K'
+    je .card_mode
+    cmp al, 'n'
+    je .cash_mode
+    cmp al, 'N'
+    je .cash_mode
     cmp al, 8
     je .backspace
     cmp al, 'x'
@@ -53,8 +69,13 @@ dispatch_key:
     call add_product
     ret
 .digit:
+    cmp byte [input_mode], 4
+    je .barcode_digit
     sub al, '0'
     call append_digit
+    ret
+.barcode_digit:
+    call append_barcode_digit
     ret
 .special:
     cmp al, 'v'
@@ -77,6 +98,11 @@ dispatch_key:
     ret
 .clear_entry:
     call clear_entry
+    ret
+.entry_or_ebt:
+    cmp byte [input_mode], 0
+    jne .clear_entry
+    call begin_ebt
     ret
 .backspace:
     call backspace_entry
@@ -107,4 +133,16 @@ dispatch_key:
     ret
 .plu_mode:
     call begin_plu_entry
+    ret
+.barcode_mode:
+    call begin_barcode_entry
+    ret
+.tax_mode:
+    call begin_tax_entry
+    ret
+.card_mode:
+    call begin_card
+    ret
+.cash_mode:
+    call begin_cash
     ret

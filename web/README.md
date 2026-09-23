@@ -26,3 +26,7 @@ BIOS licensing notice. See `build/site/v86/LICENSE` and
 The deployed floppy is pristine per build. CashOS disk writes may change the
 in-memory v86 floppy during a browser session, but this pass does not persist
 them to GitHub Pages or IndexedDB.
+
+Live demo: <https://luckymonkey.github.io/cashos/>
+
+Source repository: <https://github.com/LuckyMonkey/cashos>

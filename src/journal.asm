@@ -239,7 +239,7 @@ journal_show_status:
 .write:
     mov si, journal_write_error_message
 .show:
-    mov dh, 19
+    mov dh, 16
     mov dl, 2
     mov bl, COLOR_TOTAL
     call vga_write_at
@@ -247,7 +247,7 @@ journal_show_status:
 
 journal_show_write_error:
     mov si, journal_write_error_message
-    mov dh, 19
+    mov dh, 16
     mov dl, 2
     mov bl, COLOR_TOTAL
     call vga_write_at

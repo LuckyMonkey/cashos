@@ -1,0 +1,7 @@
+# key,name,price_cents,store_sku,upc,plu,department,tax_class,payment_flags
+# tax_class: 0 exempt, 1 subject to the configured sales-tax percent.
+# payment_flags: bit 0 = EBT eligible, bit 1 = card eligible, bit 2 = cash.
+1,COFFEE,325,1001,012345678901,0,120,1,4
+2,BAGEL,250,1002,012345678902,0,110,0,7
+3,WATER,150,1003,012345678903,0,130,0,7
+4,COOKIE,200,1004,012345678904,0,110,1,7

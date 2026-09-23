@@ -1,0 +1,15 @@
+%define BOOT_LOAD_SEGMENT 0x1000
+%define VGA_SEGMENT       0xB800
+%define VGA_COLUMNS       80
+%define VGA_ROWS          25
+%define DEBUG_PORT        0xE9
+%define COM1_BASE         0x3F8
+%define STACK_SEGMENT     0x9000
+%define STACK_TOP         0xFFFE
+%define JOURNAL_BUFFER_SEGMENT 0x8000
+%define JOURNAL_BUFFER_OFFSET  0x0000
+%define COLOR_NORMAL      0x07
+%define COLOR_TITLE       0x0F
+%define COLOR_ACCENT      0x0B
+%define COLOR_TOTAL       0x0E
+

@@ -1,0 +1,7 @@
+build/
+*.img
+*.bin
+*.log
+*.lst
+*.tmp
+

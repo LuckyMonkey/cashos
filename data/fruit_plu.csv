@@ -1,0 +1,22 @@
+# Imported/common produce PLUs.  Price is a CashOS-local default in cents.
+# PLU identity comes from IFPS; IFPS does not define our retail price.
+4011,Banana,125
+4012,Navel Orange,150
+4028,Strawberries,399
+4030,Kiwifruit,99
+4032,Watermelon,599
+4033,Small Lemon,75
+4046,Hass Avocado,199
+4048,Persian Lime,50
+4051,Red Mango,199
+4053,Lemon,99
+4054,Raspberry,399
+4131,Fuji Apple,129
+4133,Gala Apple,129
+4416,Anjou Pear,149
+4430,Golden Pineapple,399
+94011,Organic Banana,175
+94046,Organic Hass Avocado,249
+94048,Organic Persian Lime,75
+94051,Organic Red Mango,249
+94131,Organic Fuji Apple,179

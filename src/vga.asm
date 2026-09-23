@@ -52,7 +52,45 @@ vga_write_at:
     pop ax
     ret
 
+; vga_fill_at: fill CX text cells beginning at DH=row, DL=column.
+; IN:  AL=character, BL=attribute, CX=count, DH=row, DL=column.
+; This is useful for colored panels without leaving VGA text mode.
+vga_fill_at:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov [vga_fill_char], al
+    mov [vga_fill_attribute], bl
+    mov [vga_fill_count], cx
+    mov ax, VGA_SEGMENT
+    mov es, ax
+    xor bx, bx
+    mov bl, dl
+    shl bx, 1
+    xor ax, ax
+    mov al, dh
+    mov cx, 160
+    mul cx
+    add ax, bx
+    mov di, ax
+    mov cx, [vga_fill_count]
+.next:
+    mov al, [vga_fill_char]
+    stosb
+    mov al, [vga_fill_attribute]
+    stosb
+    loop .next
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
 vga_attribute db 0
+vga_fill_char db ' '
+vga_fill_attribute db COLOR_NORMAL
+vga_fill_count dw 0
 
 debug_init:
     ret

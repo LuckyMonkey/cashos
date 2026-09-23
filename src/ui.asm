@@ -37,6 +37,31 @@ register_init:
 draw_register:
     call vga_clear
     call calculate_tender_split
+    ; Colored text-mode panels keep the browser and real VGA path identical.
+    mov dh, 1
+    mov dl, 2
+    mov cx, 10
+    mov al, ' '
+    mov bl, 0x1B
+    call vga_fill_at
+    mov dh, 2
+    call vga_fill_at
+    mov dh, 11
+    mov dl, 42
+    mov cx, 37
+    mov bl, 0x13
+    call vga_fill_at
+    mov dh, 12
+    call vga_fill_at
+    mov dh, 13
+    call vga_fill_at
+    mov dh, 14
+    call vga_fill_at
+    mov dh, 20
+    mov dl, 1
+    mov cx, 78
+    mov bl, COLOR_TOTAL
+    call vga_fill_at
     mov si, line_top
     mov dh, 0
     mov dl, 0
@@ -957,8 +982,8 @@ validate_payment:
 
 line_top         db '+------------------------------------------------------------------------------+', 0
 line_mid         db '+------------------------------------------------------------------------------+', 0
-register_icon_1  db ' ', 0xDB, 0xDB, 0xDB, 0xDB, 0xDB, ' ', 0
-register_icon_2  db ' ', 0xDB, ' ', 0xDB, ' ', 0xDB, ' ', 0
+register_icon_1  db ' ', 0xDF, 0xDF, 0xDF, 0xDF, 0xDF, ' ', 0
+register_icon_2  db ' ', 0xDC, 0xDB, 0xDB, 0xDB, 0xDC, ' ', 0
 title            db 'C A S H O S', 0
 register_label   db 'REGISTER 01  |  FRONT LANE', 0
 online_label     db '[ ONLINE ]', 0

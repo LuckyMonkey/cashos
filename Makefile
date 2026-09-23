@@ -7,7 +7,7 @@ IMAGE := $(BUILD_DIR)/register.img
 APP_SECTORS := 64
 APP_BYTES := $(shell echo $$(( $(APP_SECTORS) * 512 )))
 
-.PHONY: all image run debug smoke qemu-screenshot disasm hex size layout journal journal-test journal-corrupt-test check web web-serve clean watch
+.PHONY: all image run debug smoke qemu-screenshot guard-test disasm hex size layout journal journal-test journal-corrupt-test check web web-serve clean watch
 
 all: image
 
@@ -64,6 +64,9 @@ debug: image
 smoke: image
 	./scripts/smoke-qemu.sh $(IMAGE)
 
+guard-test: image
+	./scripts/test-guards.sh $(IMAGE)
+
 qemu-screenshot: image
 	@mkdir -p docs/assets
 	@{ sleep 3; printf 'screendump build/cashos-qemu.ppm\n'; sleep 1; printf 'quit\n'; } | timeout 12s $(QEMU) -machine pc -m 64M -drive file=$(IMAGE),format=raw,if=floppy -boot order=a -display none -monitor stdio -debugcon file:build/cashos-screenshot-debug.log -global isa-debugcon.iobase=0xe9 >/dev/null 2>&1 || true
@@ -112,6 +115,7 @@ journal-corrupt-test: image $(BUILD_DIR)/journal-dump
 
 check: clean
 	$(MAKE) smoke
+	$(MAKE) guard-test
 	$(MAKE) journal-test
 	$(MAKE) journal-corrupt-test
 	$(MAKE) disasm size

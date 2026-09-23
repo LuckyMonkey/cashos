@@ -14,6 +14,8 @@ input_mode           db 0              ; 0=normal, 1=price entry, 2=quantity ent
 entry_digits         db 0
 tax_rate_percent     db 0
 payment_mode         db 0              ; 0=cash, 1=EBT, 2=card
+ebt_total            dd 0              ; eligible item subtotal for split tender
+other_due            dd 0              ; full total minus the EBT portion
 barcode_buffer       times 13 db 0
 
 register_init:
@@ -27,11 +29,14 @@ register_init:
     mov byte [entry_digits], 0
     mov byte [tax_rate_percent], 0
     mov byte [payment_mode], 0
+    mov dword [ebt_total], 0
+    mov dword [other_due], 0
     mov byte [barcode_buffer], 0
     ret
 
 draw_register:
     call vga_clear
+    call calculate_tender_split
     mov si, line_top
     mov dh, 0
     mov dl, 0
@@ -126,6 +131,19 @@ draw_register:
     mov dl, 11
     mov bl, COLOR_NORMAL
     call write_number_at
+    mov si, ebt_label
+    mov dh, 13
+    mov dl, 45
+    mov bl, COLOR_NORMAL
+    call vga_write_at
+    mov eax, [ebt_total]
+    mov di, money_buffer
+    call money_format
+    mov si, money_buffer
+    mov dh, 13
+    mov dl, 58
+    mov bl, COLOR_NORMAL
+    call vga_write_at
     mov si, last_tx_label
     mov dh, 12
     mov dl, 2
@@ -155,10 +173,18 @@ draw_register:
     mov dl, 11
     mov bl, COLOR_NORMAL
     call write_number_at
-    mov si, entry_header
+    mov si, due_label
     mov dh, 14
     mov dl, 45
-    mov bl, COLOR_ACCENT
+    mov bl, COLOR_NORMAL
+    call vga_write_at
+    mov eax, [other_due]
+    mov di, money_buffer
+    call money_format
+    mov si, money_buffer
+    mov dh, 14
+    mov dl, 58
+    mov bl, COLOR_NORMAL
     call vga_write_at
     mov si, entry_label
     cmp byte [input_mode], 3
@@ -389,6 +415,13 @@ draw_payment_mode:
     mov bl, COLOR_HIGHLIGHT
     jmp vga_write_at
 
+; IN: SI=DS:NUL message. Shows an operator-visible warning on the status row.
+show_notice:
+    mov dh, 16
+    mov dl, 2
+    mov bl, COLOR_WARNING
+    jmp vga_write_at
+
 ; IN: AX=zero-based product index.
 add_product:
     cmp ax, product_count
@@ -402,6 +435,9 @@ add_product:
     mov bx, [item_count]
     cmp bx, 32
     jae .full
+    mov eax, [register_total]
+    add eax, edx
+    jc .overflow
     shl bx, 1
     mov [sale_items + bx], dx
     xor ax, ax
@@ -426,6 +462,13 @@ add_product:
     ret
 .full:
     pop ax
+    mov si, cart_full_message
+    call show_notice
+    ret
+.overflow:
+    pop ax
+    mov si, total_overflow_message
+    call show_notice
 .done:
     ret
 
@@ -433,7 +476,7 @@ add_product:
 ; IN: AL=ASCII digit. Keeps the UPC as text because UPCs are 12 digits.
 append_barcode_digit:
     cmp byte [entry_digits], 12
-    jae .done
+    jae .limit
     mov bx, 0
     mov bl, [entry_digits]
     mov [barcode_buffer + bx], al
@@ -444,6 +487,10 @@ append_barcode_digit:
     call draw_register
 .done:
     ret
+.limit:
+    mov si, input_limit_message
+    call show_notice
+    ret
 
 ; Append one decimal digit to an entry, capped at 99999 so five-digit PLUs fit.
 append_digit:
@@ -453,11 +500,15 @@ append_digit:
     mul ecx
     add eax, ebx
     cmp eax, 99999
-    ja .done
+    ja .limit
     mov [entry_value], eax
     inc byte [entry_digits]
     call draw_register
 .done:
+    ret
+.limit:
+    mov si, input_limit_message
+    call show_notice
     ret
 
 begin_price_entry:
@@ -469,9 +520,9 @@ begin_price_entry:
 
 begin_quantity_entry:
     cmp byte [input_mode], 1
-    jne .done
+    jne .wrong_mode
     cmp dword [entry_value], 0
-    je .done
+    je .missing_price
     mov eax, [entry_value]
     mov [pending_price], eax
     mov dword [entry_value], 0
@@ -479,6 +530,14 @@ begin_quantity_entry:
     mov byte [input_mode], 2
     call draw_register
 .done:
+    ret
+.wrong_mode:
+    mov si, quantity_mode_message
+    call show_notice
+    ret
+.missing_price:
+    mov si, quantity_price_message
+    call show_notice
     ret
 
 clear_entry:
@@ -525,16 +584,18 @@ commit_entry:
     jne .done
     mov eax, [entry_value]
     call add_amount
+    jc .entry_error
     jmp clear_entry
 .quantity:
     mov eax, [pending_price]
     mov ecx, [entry_value]
     test ecx, ecx
-    jz .done
+    jz .quantity_error
     mul ecx
     test edx, edx
-    jnz .done
+    jnz .quantity_error
     call add_amount
+    jc .entry_error
     jmp clear_entry
 .barcode:
     call add_upc
@@ -543,38 +604,46 @@ commit_entry:
 .tax:
     mov eax, [entry_value]
     cmp eax, 99
-    ja .done
+    ja .tax_error
     mov [tax_rate_percent], al
     DEBUG_STRING debug_tax
     mov ax, [tax_rate_percent]
     call debug_u16
     DEBUG_STRING debug_newline
     jmp clear_entry
+.tax_error:
+    mov si, tax_limit_message
+    call show_notice
+    ret
 .plu:
     mov eax, [entry_value]
     call add_plu
     jc .invalid_plu
     jmp clear_entry
+.entry_error:
+    ret
+.quantity_error:
+    mov si, quantity_error_message
+    call show_notice
+    ret
 .invalid_plu:
     mov si, invalid_plu_message
-    mov dh, 16
-    mov dl, 2
-    mov bl, COLOR_TOTAL
-    call vga_write_at
+    call show_notice
     ret
 .invalid_barcode:
     mov si, invalid_barcode_message
-    mov dh, 16
-    mov dl, 2
-    mov bl, COLOR_TOTAL
-    call vga_write_at
+    call show_notice
     ret
 .done:
     ret
 
 subtract_entry:
     cmp byte [input_mode], 0
-    je .done
+    jne .has_entry
+    mov si, subtract_mode_message
+    call show_notice
+    ret
+.has_entry:
     mov eax, [entry_value]
     cmp eax, [register_total]
     ja .zero
@@ -588,18 +657,24 @@ subtract_entry:
 
 ; Add a custom amount to the same item stack used by fixed products.
 ; IN: EAX=integer cents, limited to 65535 for this 16-bit MVP.
+; OUT: CF clear=stored, CF set=rejected.
 add_amount:
     cmp eax, 65535
-    ja .done
+    ja .amount_limit
+    test eax, eax
+    jz .amount_limit
     mov bx, [item_count]
     cmp bx, 32
-    jae .done
+    jae .full
+    mov edx, [register_total]
+    add edx, eax
+    jc .overflow
     shl bx, 1
     mov [sale_items + bx], ax
     mov word [sale_tax_class + bx], 1
     mov word [sale_payment_flags + bx], 4
     inc word [item_count]
-    add [register_total], eax
+    mov [register_total], edx
     push eax
     DEBUG_STRING debug_amount
     pop eax
@@ -609,12 +684,33 @@ add_amount:
     call debug_u16
     DEBUG_STRING debug_newline
     call draw_register
+    clc
+    ret
+.amount_limit:
+    mov si, amount_limit_message
+    call show_notice
+    stc
+    ret
+.full:
+    mov si, cart_full_message
+    call show_notice
+    stc
+    ret
+.overflow:
+    mov si, total_overflow_message
+    call show_notice
+    stc
+    ret
 .done:
     ret
 
 void_last_item:
     cmp word [item_count], 0
-    je .done
+    jne .has_item
+    mov si, void_empty_message
+    call show_notice
+    ret
+.has_item:
     dec word [item_count]
     mov bx, [item_count]
     shl bx, 1
@@ -658,6 +754,7 @@ add_plu:
     mov dx, [plu_prices + bx]
     movzx eax, dx
     call add_amount
+    jc .store_failed
     mov bx, [item_count]
     dec bx
     shl bx, 1
@@ -671,6 +768,10 @@ add_plu:
     DEBUG_STRING debug_newline
     clc
     ret
+.store_failed:
+    pop eax
+    stc
+    ret
 
 ; calculate_tax
 ; IN: EAX=subtotal cents, ECX=whole-number percent.
@@ -679,6 +780,33 @@ calculate_tax:
     mul ecx
     mov ecx, 100
     div ecx
+    ret
+
+; calculate_tender_split
+; OUT: [ebt_total]=eligible item subtotal, [other_due]=full sale total minus it.
+; EBT covers eligible item cents; tax remains part of the other balance.
+calculate_tender_split:
+    xor eax, eax
+    xor bx, bx
+    mov cx, [item_count]
+.eligible:
+    test cx, cx
+    jz .store_eligible
+    test word [sale_payment_flags + bx], 1
+    jz .next
+    movzx edx, word [sale_items + bx]
+    add eax, edx
+.next:
+    add bx, 2
+    dec cx
+    jmp .eligible
+.store_eligible:
+    mov [ebt_total], eax
+    mov eax, [register_total]
+    call calculate_sale_tax
+    add eax, [register_total]
+    sub eax, [ebt_total]
+    mov [other_due], eax
     ret
 
 ; calculate_sale_tax
@@ -734,6 +862,7 @@ add_upc:
     movzx eax, ax
     push si
     call add_amount
+    jc .store_failed
     pop si
     push si
     mov al, [product_tax_class + si]
@@ -755,6 +884,10 @@ add_upc:
     DEBUG_STRING debug_newline
     clc
     ret
+.store_failed:
+    pop si
+    stc
+    ret
 .unknown:
     stc
     ret
@@ -765,6 +898,20 @@ add_plu_unknown:
     ret
 
 complete_sale:
+    cmp word [item_count], 0
+    jne .has_items
+    mov si, empty_sale_message
+    call show_notice
+    ret
+.has_items:
+    call calculate_tender_split
+    DEBUG_STRING debug_ebt_split
+    mov eax, [ebt_total]
+    call debug_u32
+    DEBUG_STRING debug_other_due
+    mov eax, [other_due]
+    call debug_u32
+    DEBUG_STRING debug_newline
     movzx eax, word [transaction_number]
     inc eax
     mov [journal_tx_temp], eax
@@ -777,7 +924,6 @@ complete_sale:
     mov [journal_total_temp], edx
     mov cx, [item_count]
     call validate_payment
-    jc .payment_error
     DEBUG_STRING debug_tx_begin
     mov ax, word [journal_tx_temp]
     call debug_u16
@@ -800,34 +946,11 @@ complete_sale:
     DEBUG_STRING debug_newline
     call journal_show_write_error
     ret
-.payment_error:
-    DEBUG_STRING debug_payment_fail
-    DEBUG_STRING debug_newline
-    mov si, payment_error_message
-    mov dh, 16
-    mov dl, 2
-    mov bl, COLOR_TOTAL
-    call vga_write_at
-    ret
-
 ; validate_payment
 ; OUT: CF clear if the selected payment mode is allowed for every item.
 validate_payment:
-    cmp byte [payment_mode], 1
-    jne .ok
-    xor bx, bx
-    mov cx, [item_count]
-.check:
-    test cx, cx
-    jz .ok
-    test word [sale_payment_flags + bx], 1
-    jz .fail
-    add bx, 2
-    dec cx
-    jmp .check
-.fail:
-    stc
-    ret
+    ; EBT is a split tender: ineligible items become the remaining balance.
+    ; No mixed basket is rejected here.
 .ok:
     clc
     ret
@@ -848,6 +971,8 @@ current_sale     db 'CURRENT SALE', 0
 payment_cash_label db 'PAY: CASH', 0
 payment_ebt_label db 'PAY: EBT', 0
 payment_card_label db 'PAY: CARD', 0
+ebt_label        db 'EBT ELIG:', 0
+due_label        db 'BALANCE:', 0
 item_count_label db 'ITEMS: ', 0
 sale_items_label db 'ITEM COUNT:', 0
 sale_items_suffix db ' ITEM(S)', 0
@@ -870,7 +995,17 @@ tax_label        db 'TAX', 0
 percent_suffix   db '%', 0
 invalid_plu_message db 'UNKNOWN PRODUCE PLU', 0
 invalid_barcode_message db 'UNKNOWN UPC', 0
-payment_error_message db 'ITEM NOT EBT ELIGIBLE', 0
+cart_full_message db 'CART FULL - COMPLETE SALE OR CLEAR', 0
+amount_limit_message db 'PRICE MUST BE 1..65535 CENTS', 0
+total_overflow_message db 'TOTAL LIMIT REACHED - SALE NOT CHANGED', 0
+input_limit_message db 'INPUT LIMIT REACHED - BACKSPACE TO EDIT', 0
+quantity_mode_message db 'PRESS P AND ENTER A PRICE BEFORE X', 0
+quantity_price_message db 'PRICE CANNOT BE ZERO', 0
+quantity_error_message db 'INVALID QUANTITY OR AMOUNT TOO LARGE', 0
+empty_sale_message db 'NO ITEMS - ADD AN ITEM BEFORE ENTER', 0
+tax_limit_message db 'TAX MUST BE 0..99 PERCENT', 0
+subtract_mode_message db 'ENTER AN AMOUNT BEFORE SUBTRACT', 0
+void_empty_message db 'NO ITEM TO VOID', 0
 version_text     db 'CASHOS 0.1.0  |  REAL MODE  |  1.44MB FLOPPY', 0
 small_number     db '0', 0
 debug_add        db 'ADD_ITEM=', 0
@@ -883,5 +1018,6 @@ debug_clear      db 'CLEAR_SALE', 0
 debug_plu       db 'ADD_PLU=', 0
 debug_barcode   db 'ADD_UPC=', 0
 debug_tax       db 'TAX_RATE=', 0
-debug_payment_fail db 'PAYMENT_REJECTED', 0
+debug_ebt_split db 'EBT_APPLIED=', 0
+debug_other_due db 'BALANCE_DUE=', 0
 debug_newline    db 13, 10, 0

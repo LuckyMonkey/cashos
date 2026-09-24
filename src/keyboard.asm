@@ -86,6 +86,10 @@ dispatch_key:
     je .clear
     cmp al, 'C'
     je .clear
+    cmp al, 'a'
+    je .admin
+    cmp al, 'A'
+    je .admin
     cmp al, 'r'
     je .rescan
     cmp al, 'R'
@@ -121,6 +125,9 @@ dispatch_key:
     ret
 .clear:
     call clear_sale
+    ret
+.admin:
+    call profile_admin_action
     ret
 .rescan:
     call journal_init

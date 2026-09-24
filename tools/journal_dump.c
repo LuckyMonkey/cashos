@@ -8,7 +8,8 @@ enum {
     record_size = 32,
     journal_end_lba = 2880,
     magic = 0x5458,
-    version = 1,
+    legacy_version = 1,
+    version = 2,
     committed = 1
 };
 
@@ -35,7 +36,8 @@ static int all_zero(const unsigned char *record) {
 }
 
 static int valid_record(const unsigned char *record) {
-    return get_u16(record) == magic && record[2] == version &&
+    int known_version = record[2] == version || record[2] == legacy_version;
+    return get_u16(record) == magic && known_version &&
            record[3] == committed && get_u32(record + 16) == checksum(record);
 }
 
@@ -72,9 +74,15 @@ int main(int argc, char **argv) {
                 continue;
             }
             uint32_t total = get_u32(record + 8);
-            printf("TX %04u  ITEMS=%u  TOTAL=$%u.%02u  VALID\n",
-                   get_u32(record + 4), get_u16(record + 12),
-                   total / 100, total % 100);
+            if (record[2] == version) {
+                printf("TX %04u  ITEMS=%u  TOTAL=$%u.%02u  VALID  EMP=%u\n",
+                       get_u32(record + 4), get_u16(record + 12),
+                       total / 100, total % 100, get_u16(record + 14));
+            } else {
+                printf("TX %04u  ITEMS=%u  TOTAL=$%u.%02u  VALID  EMP=LEGACY\n",
+                       get_u32(record + 4), get_u16(record + 12),
+                       total / 100, total % 100);
+            }
             ++valid;
         }
     }

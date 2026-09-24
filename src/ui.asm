@@ -120,6 +120,7 @@ draw_register:
     mov si, product_4
     mov dh, 8
     call vga_write_at
+    call profile_draw_identity
     mov si, line_mid
     mov dh, 10
     mov dl, 0

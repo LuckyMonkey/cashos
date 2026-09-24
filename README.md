@@ -25,7 +25,8 @@ The demo runs the same `build/register.img` produced by this repository inside [
 - 🧮 Integer-cent arithmetic with custom prices, quantities, tax, void, clear, and payment modes
 - 🏷️ Catalog items with store SKU, UPC, PLU, department, tax class, and payment flags
 - 🍎 Produce PLUs loaded from editable CSV data
-- 💾 Persistent 32-byte transaction records in raw floppy sectors
+- 💾 Persistent 32-byte transaction records in raw floppy sectors, attributed to the booted employee profile
+- 🪪 Employee/admin identity carried in the raw profile sector at LBA 66
 - 🖥️ Direct 80×25 VGA text output
 - ⌨️ BIOS keyboard input plus UPC/barcode entry mode
 - 🧪 QEMU smoke tests, journal persistence tests, binary inspection, and size checks
@@ -62,6 +63,7 @@ LBA 1–64: CashOS stage two
 | `E` / `K` / `N` | EBT / card / cash payment mode |
 | `V` / `C` | Void the last item / clear the sale |
 | `R` | Rescan the transaction journal |
+| `A` | Show admin status (admin profile only) |
 | `Enter` | Commit the current sale |
 
 ## 🧰 Build and run locally
@@ -83,6 +85,9 @@ make layout
 make disasm
 make hex
 make journal
+make employee NAME=CHARLIE ID=1  # build/employee.img
+make admin                       # build/admin.img
+make profile-test
 ```
 
 `make debug` starts QEMU paused with a GDB stub on port 1234. See [HACKING.md](HACKING.md) for the real-mode debugging workflow.
@@ -100,7 +105,7 @@ make web
 make web-serve
 ```
 
-Then open `http://localhost:8000/`. Serve over HTTP rather than `file://` so the browser can load WebAssembly and emulator assets. Browser-session floppy writes are not persisted across refreshes yet.
+Then open `http://localhost:8000/`. Serve over HTTP rather than `file://` so the browser can load WebAssembly and emulator assets. The web build provisions the floppy as operator `DEMO` (employee ID 999) before serving it. Browser-session floppy writes are not persisted across refreshes yet.
 
 ## 🗂️ Repository map
 
@@ -116,7 +121,7 @@ Then open `http://localhost:8000/`. Serve over HTTP rather than `file://` so the
 
 ## 🗺️ Next on the roadmap
 
-The intentionally small foundation leaves room for an admin floppy that edits catalog data, employee-register update media, richer department policy, journal recovery, and eventually a protected-mode/freestanding-C layer. Those are future milestones—not hidden dependencies in the current image.
+The intentionally small foundation leaves room for an admin floppy that edits catalog data, signed/stronger employee credentials, employee-register update media, richer department policy, journal recovery, and eventually a protected-mode/freestanding-C layer. Those are future milestones—not hidden dependencies in the current image.
 
 ## ⚠️ Physical floppy warning
 

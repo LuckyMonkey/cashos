@@ -23,6 +23,7 @@ main_start:
     int 0x10
     call vga_clear
     call register_init
+    call profile_init
     call journal_init
     call draw_register
     DEBUG_STRING debug_ui_ready
@@ -45,6 +46,7 @@ main_loop:
 %include "keyboard.asm"
 %include "products.asm"
 %include "money.asm"
+%include "profile.asm"
 %include "ui.asm"
 %include "disk.asm"
 %include "journal.asm"

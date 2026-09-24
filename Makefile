@@ -7,7 +7,7 @@ IMAGE := $(BUILD_DIR)/register.img
 APP_SECTORS := 64
 APP_BYTES := $(shell echo $$(( $(APP_SECTORS) * 512 )))
 
-.PHONY: all image run debug smoke qemu-screenshot guard-test disasm hex size layout journal journal-test journal-corrupt-test check web web-serve clean watch
+.PHONY: all image run debug smoke qemu-screenshot guard-test disasm hex size layout journal journal-test journal-corrupt-test profile-test employee admin check web web-serve clean watch
 
 all: image
 
@@ -23,7 +23,7 @@ $(BUILD_DIR)/fruit_plu.inc: data/fruit_plu.csv scripts/import-plu.sh | $(BUILD_D
 $(BUILD_DIR)/catalog.inc: data/catalog.csv scripts/import-catalog.sh | $(BUILD_DIR)
 	sh scripts/import-catalog.sh $< $@
 
-$(BUILD_DIR)/cashos.bin: src/main.asm src/vga.asm src/keyboard.asm src/products.asm src/money.asm src/ui.asm src/disk.asm src/journal.asm data/fruit_plu.csv data/catalog.csv $(BUILD_DIR)/fruit_plu.inc $(BUILD_DIR)/catalog.inc include/constants.inc include/disk_layout.inc include/macros.inc | $(BUILD_DIR)
+$(BUILD_DIR)/cashos.bin: src/main.asm src/vga.asm src/keyboard.asm src/products.asm src/money.asm src/profile.asm src/ui.asm src/disk.asm src/journal.asm data/fruit_plu.csv data/catalog.csv $(BUILD_DIR)/fruit_plu.inc $(BUILD_DIR)/catalog.inc include/constants.inc include/disk_layout.inc include/macros.inc | $(BUILD_DIR)
 	$(NASM) -f bin -I src/ -I include/ -o $@ $<
 
 image: $(IMAGE)
@@ -32,6 +32,7 @@ $(IMAGE): $(BUILD_DIR)/boot.bin $(BUILD_DIR)/cashos.bin scripts/mkimage.sh inclu
 	./scripts/mkimage.sh $(IMAGE) $(BUILD_DIR)/boot.bin $(BUILD_DIR)/cashos.bin $(APP_SECTORS)
 
 WEB_SITE := $(BUILD_DIR)/site
+DEMO_IMAGE := $(BUILD_DIR)/demo.img
 
 web: $(WEB_SITE)/register.img
 	@test -s $(WEB_SITE)/index.html
@@ -43,13 +44,16 @@ web: $(WEB_SITE)/register.img
 	@test "$$(stat -c %s $(WEB_SITE)/register.img)" -eq 1474560
 	@echo "web site ready at $(WEB_SITE)/"
 
-$(WEB_SITE)/register.img: $(IMAGE) web/index.html web/app.js web/style.css web/README.md web/assets/cash-register-pixel.png scripts/prepare-v86.sh
+$(DEMO_IMAGE): $(IMAGE) $(BUILD_DIR)/profile-tool
+	$(BUILD_DIR)/profile-tool --input $(IMAGE) --output $@ --id 999 --name DEMO --role operator
+
+$(WEB_SITE)/register.img: $(DEMO_IMAGE) web/index.html web/app.js web/style.css web/README.md web/assets/cash-register-pixel.png scripts/prepare-v86.sh
 	rm -rf $(WEB_SITE)
 	mkdir -p $(WEB_SITE)
 	cp web/index.html web/app.js web/style.css web/README.md $(WEB_SITE)/
 	mkdir -p $(WEB_SITE)/assets
 	cp web/assets/cash-register-pixel.png $(WEB_SITE)/assets/
-	cp $(IMAGE) $(WEB_SITE)/register.img
+	cp $(DEMO_IMAGE) $(WEB_SITE)/register.img
 	sh scripts/prepare-v86.sh $(WEB_SITE)
 
 web-serve: web
@@ -95,13 +99,29 @@ layout: image
 	@echo 'LBA 0       boot sector'
 	@echo 'LBA 1-64    CashOS stage two'
 	@echo 'LBA 65       future configuration'
-	@echo 'LBA 66       future employee/profile'
+	@echo 'LBA 66       employee/profile sector'
 	@echo 'LBA 67-126   reserved'
 	@echo 'LBA 127      future journal metadata'
 	@echo 'LBA 128-2879 future transaction journal'
 
 $(BUILD_DIR)/journal-dump: tools/journal_dump.c | $(BUILD_DIR)
 	$(CC) -std=c11 -Wall -Wextra -Werror -O2 -o $@ $<
+
+$(BUILD_DIR)/profile-tool: tools/profile_tool.c | $(BUILD_DIR)
+	$(CC) -std=c11 -Wall -Wextra -Werror -O2 -o $@ $<
+
+employee: image $(BUILD_DIR)/profile-tool
+	@test -n "$(NAME)" || { echo 'usage: make employee NAME=CHARLIE ID=1'; exit 1; }
+	@test -n "$(ID)" || { echo 'usage: make employee NAME=CHARLIE ID=1'; exit 1; }
+	$(BUILD_DIR)/profile-tool --input $(IMAGE) --output $(BUILD_DIR)/employee.img --id $(ID) --name "$(NAME)" --role operator
+	@echo "wrote $(BUILD_DIR)/employee.img"
+
+admin: image $(BUILD_DIR)/profile-tool
+	$(BUILD_DIR)/profile-tool --input $(IMAGE) --output $(BUILD_DIR)/admin.img --id 0 --name ADMIN --role admin
+	@echo "wrote $(BUILD_DIR)/admin.img"
+
+profile-test: image $(BUILD_DIR)/profile-tool
+	./scripts/test-profile.sh $(IMAGE) $(BUILD_DIR)/profile-tool
 
 journal: image $(BUILD_DIR)/journal-dump
 	$(BUILD_DIR)/journal-dump $(IMAGE)
@@ -118,6 +138,7 @@ check: clean
 	$(MAKE) guard-test
 	$(MAKE) journal-test
 	$(MAKE) journal-corrupt-test
+	$(MAKE) profile-test
 	$(MAKE) disasm size
 
 clean:

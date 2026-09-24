@@ -2,12 +2,12 @@
 ;
 ; Record format, 32 bytes, little-endian multi-byte fields:
 ;   +0  word magic       'TX' (0x5458)
-;   +2  byte version     1
+;   +2  byte version     2 (version 1 remains readable)
 ;   +3  byte flags       1 = committed
 ;   +4  dword tx_id
 ;   +8  dword total_cents
 ;   +12 word item_count
-;   +14 word reserved
+;   +14 word employee_id (0xFFFF = unprovisioned/guest)
 ;   +16 dword checksum   sum of bytes 0..15
 ;   +20 12 bytes reserved, zero
 ;
@@ -86,7 +86,10 @@ journal_validate_record:
     cmp word [es:di+0], JOURNAL_MAGIC
     jne .invalid
     cmp byte [es:di+2], JOURNAL_VERSION
+    je .version_ok
+    cmp byte [es:di+2], JOURNAL_VERSION_LEGACY
     jne .invalid
+.version_ok:
     cmp byte [es:di+3], JOURNAL_FLAG_COMMITTED
     jne .invalid
     xor eax, eax
@@ -117,7 +120,8 @@ journal_build_record:
     mov [es:di+4], eax
     mov [es:di+8], edx
     mov [es:di+12], cx
-    mov word [es:di+14], 0
+    mov ax, [current_employee_id]
+    mov [es:di+14], ax
     xor eax, eax
     mov [es:di+16], eax
     mov [es:di+20], eax

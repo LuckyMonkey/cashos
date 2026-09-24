@@ -1,7 +1,8 @@
 # CashOS browser demo
 
-The browser demo boots the same `build/register.img` produced by the normal
-CashOS Makefile. It does not recreate the register in HTML or JavaScript:
+The browser demo boots a `build/demo.img` derived from the normal
+`build/register.img` by provisioning LBA 66 as operator DEMO (employee ID
+999). The CashOS executable bytes are the same. It does not recreate the register in HTML or JavaScript:
 v86 emulates the PC, BIOS, VGA, keyboard, RAM, and floppy controller, and the
 guest executes the CashOS boot sector and real-mode assembly.
 

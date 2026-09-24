@@ -2,7 +2,8 @@
 
 The browser demo boots a `build/demo.img` derived from the normal
 `build/register.img` by provisioning LBA 66 as operator DEMO (employee ID
-999). The CashOS executable bytes are the same. It does not recreate the register in HTML or JavaScript:
+999). The CashOS executable bytes are the same. LBA 65 remains blank in the
+public demo, so direct COM1/ZPL printing is intentionally disabled there. It does not recreate the register in HTML or JavaScript:
 v86 emulates the PC, BIOS, VGA, keyboard, RAM, and floppy controller, and the
 guest executes the CashOS boot sector and real-mode assembly.
 

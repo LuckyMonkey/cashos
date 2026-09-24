@@ -27,6 +27,7 @@ The demo runs the same `build/register.img` produced by this repository inside [
 - 🍎 Produce PLUs loaded from editable CSV data
 - 💾 Persistent 32-byte transaction records in raw floppy sectors, attributed to the booted employee profile
 - 🪪 Employee/admin identity carried in the raw profile sector at LBA 66
+- 🖨️ Direct COM1 UART output with ZPL transaction labels for Zebra-compatible printers
 - 🖥️ Direct 80×25 VGA text output
 - ⌨️ BIOS keyboard input plus UPC/barcode entry mode
 - 🧪 QEMU smoke tests, journal persistence tests, binary inspection, and size checks
@@ -47,6 +48,7 @@ LBA 1–64: CashOS stage two
    ├── VGA text memory at 0xB8000
    ├── BIOS keyboard INT 16h
    ├── BIOS floppy reads/writes INT 13h
+   ├── direct COM1 UART I/O at 0x3F8 for configured ZPL printers
    └── journal records at LBA 128+
 ```
 
@@ -87,7 +89,9 @@ make hex
 make journal
 make employee NAME=CHARLIE ID=1  # build/employee.img
 make admin                       # build/admin.img
+make printer-image NAME=CHARLIE ID=1 BAUD=9600  # build/printer.img
 make profile-test
+make printer-test
 ```
 
 `make debug` starts QEMU paused with a GDB stub on port 1234. See [HACKING.md](HACKING.md) for the real-mode debugging workflow.

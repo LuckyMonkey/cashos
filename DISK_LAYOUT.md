@@ -6,13 +6,31 @@ The image is exactly 1,474,560 bytes: 2,880 sectors of 512 bytes. It is raw medi
 | --- | --- | ---: |
 | 0 | boot sector | 512 bytes |
 | 1–64 | CashOS stage two | 32 KiB maximum |
-| 65 | future configuration | 512 bytes |
+| 65 | machine configuration / serial-printer settings | 512 bytes |
 | 66 | employee/profile data | 512 bytes |
 | 67–126 | reserved | 60 sectors |
 | 127 | reserved future journal metadata | 512 bytes |
 | 128–2879 | future transaction journal | 2752 sectors |
 
-The image builder writes only LBA 0 and the stage-two bytes beginning at LBA 1. All other bytes remain zero until a host-side profile tool provisions LBA 66 or CashOS writes journal data. The journal uses a scan strategy and does not currently write LBA 127. The build fails rather than truncating a stage-two binary larger than 64 sectors.
+The image builder writes only LBA 0 and the stage-two bytes beginning at LBA 1. All other bytes remain zero until a host-side config tool provisions LBA 65, a profile tool provisions LBA 66, or CashOS writes journal data. The journal uses a scan strategy and does not currently write LBA 127. The build fails rather than truncating a stage-two binary larger than 64 sectors.
+
+## Machine configuration sector
+
+LBA 65 is a fixed 512-byte configuration record. A blank sector is the default configuration and leaves printing disabled. A malformed nonblank sector is rejected and also leaves printing disabled.
+
+| Offset | Size | Meaning |
+| ---: | ---: | --- |
+| 0 | 4 | magic bytes `CFG1` |
+| 4 | 1 | configuration version, currently `1` |
+| 5 | 1 | flags; bit 0 enables the printer |
+| 6 | 1 | printer protocol; `1` = ZPL over serial |
+| 7 | 1 | serial port; currently `1` = COM1 |
+| 8 | 2 | UART baud divisor; baud = `115200 / divisor` |
+| 10 | 6 | reserved zero bytes |
+| 16 | 4 | checksum: sum of bytes 0-15 |
+| 20 | 492 | reserved zero bytes |
+
+For example, 9600 baud uses divisor `12`. The host-side `config-tool` writes this record; the guest only consumes validated values.
 
 ## Employee/profile sector
 

@@ -25,3 +25,12 @@ taxable-item selection, and EBT eligibility. Custom prices default to taxable
 cash-only policy; the future admin floppy can replace the catalog record data.
 
 The repository intentionally leaves room for a future protected-mode/freestanding-C layer, but does not add an abstraction for it yet.
+
+
+## Machine configuration and serial printing
+
+Before loading the employee profile, `config.asm` reads LBA 65 through the existing BIOS `INT 13h` path into the shared buffer at `8000:0000`. A blank sector means defaults; a valid `CFG1` record can enable ZPL printing on COM1. The useful settings are copied into stage-two state before the next disk read overwrites the buffer.
+
+When enabled, `serial.asm` programs a 16550-compatible UART directly at I/O base `0x3F8`: it disables UART interrupts, sets DLAB, writes the configured baud divisor, selects 8N1, enables/clears the FIFO, and asserts DTR/RTS. Transmit waits on line-status bit 5 with a bounded timeout. This path does not call a BIOS serial interrupt.
+
+After `journal_commit` succeeds, `printer.asm` emits a compact ZPL transaction label containing the transaction ID, employee ID, and tax-inclusive total. Printing is deliberately best-effort after persistence: a serial timeout sets printer error state but never rolls back a transaction already written to the floppy journal. Debugging remains on QEMU port `0xE9`, so QEMU can capture COM1 independently with `-serial file:...`.

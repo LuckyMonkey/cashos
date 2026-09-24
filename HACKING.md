@@ -35,3 +35,18 @@ gdb-multiarch
 ```
 
 Real-mode symbol handling is intentionally basic; the boot-sector disassembly, debug port, and direct memory inspection are the primary tools. NASM syntax support is useful in editors but not required.
+
+
+## COM1 / ZPL printer path
+
+`src/config.asm` consumes LBA 65 machine configuration. `src/serial.asm` owns direct COM1 port I/O at `0x3F8`; `src/printer.asm` owns ZPL serialization. A normal unconfigured floppy leaves the printer off.
+
+Build a configured operator image with:
+
+```sh
+make printer-image NAME=CHARLIE ID=1 BAUD=9600
+```
+
+This produces `build/printer.img`. `make printer-test` provisions a temporary operator/configured image, boots it in QEMU, captures COM1 to a host file, completes a $3.25 transaction, verifies the raw ZPL stream, and independently checks that the journal still contains the sale with the employee ID.
+
+The UART sequence is intentionally visible rather than abstracted away: COM1+1 disables UART interrupts; COM1+3 sets DLAB; COM1/COM1+1 receive the divisor; COM1+3 selects 8N1; COM1+2 configures the FIFO; COM1+4 asserts DTR/RTS; COM1+5 exposes the line-status register. Bit 5 of that status register means the transmit holding register is empty and can accept another byte.

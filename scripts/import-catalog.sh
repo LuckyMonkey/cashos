@@ -35,7 +35,7 @@ END {
     printf "catalog_names dw "
     for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "catalog_name_%d", i }
     print ""
-    for (i = 1; i <= count; i++) printf "catalog_name_%d db \\x27%s\\x27,0\n", i, name[i]
+    for (i = 1; i <= count; i++) printf "catalog_name_%d db %c%s%c,0\n", i, 39, name[i], 39
     printf "catalog_prices dw "
     for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "%s", price[i] }
     print ""

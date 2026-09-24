@@ -28,7 +28,7 @@ END {
     printf "plu_names dw "
     for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "plu_name_%d", i }
     print ""
-    for (i = 1; i <= count; i++) printf "plu_name_%d db \\x27%s\\x27,0\n", i, name[i]
+    for (i = 1; i <= count; i++) printf "plu_name_%d db %c%s%c,0\n", i, 39, name[i], 39
     printf "plu_codes  dd "
     for (i = 1; i <= count; i++) {
         if (i > 1 && (i - 1) % 10 != 0) printf ", "

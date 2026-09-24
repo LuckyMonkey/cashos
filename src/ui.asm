@@ -2,6 +2,7 @@ register_total      dd 0
 transaction_number  dw 0
 item_count           dw 0
 sale_items           times 32 dw 0
+sale_item_names      times 32 dw 0
 sale_tax_class       times 32 dw 0
 sale_payment_flags   times 32 dw 0
 money_buffer         times 16 db 0
@@ -467,6 +468,10 @@ add_product:
     jc .overflow
     shl bx, 1
     mov [sale_items + bx], dx
+    mov di, si
+    shl di, 1
+    mov ax, [product_names + di]
+    mov [sale_item_names + bx], ax
     xor ax, ax
     mov al, [product_tax_class + si]
     mov [sale_tax_class + bx], ax
@@ -698,6 +703,7 @@ add_amount:
     jc .overflow
     shl bx, 1
     mov [sale_items + bx], ax
+    mov word [sale_item_names + bx], custom_item_name
     mov word [sale_tax_class + bx], 1
     mov word [sale_payment_flags + bx], 4
     inc word [item_count]
@@ -779,12 +785,16 @@ add_plu:
 .found:
     shr bx, 1
     mov dx, [plu_prices + bx]
+    push bx
     movzx eax, dx
     call add_amount
-    jc .store_failed
+    jc .store_failed_index
+    pop si
     mov bx, [item_count]
     dec bx
     shl bx, 1
+    mov ax, [plu_names + si]
+    mov [sale_item_names + bx], ax
     mov word [sale_tax_class + bx], 0
     mov word [sale_payment_flags + bx], 7
     pop eax                         ; restore the code; debug_puts uses AL
@@ -795,6 +805,8 @@ add_plu:
     DEBUG_STRING debug_newline
     clc
     ret
+.store_failed_index:
+    pop bx
 .store_failed:
     pop eax
     stc
@@ -901,6 +913,10 @@ add_upc:
     mov al, [product_payment_flags + si]
     xor ah, ah
     mov [sale_payment_flags + bx], ax
+    mov di, si
+    shl di, 1
+    mov ax, [product_names + di]
+    mov [sale_item_names + bx], ax
     pop si
     shl si, 1
     mov ax, [product_skus + si]
@@ -997,6 +1013,7 @@ product_1        db '1  COFFEE                                      $3.25', 0
 product_2        db '2  BAGEL                                       $2.50', 0
 product_3        db '3  WATER                                       $1.50', 0
 product_4        db '4  COOKIE                                      $2.00', 0
+custom_item_name db 'CUSTOM ITEM', 0
 current_sale     db 'CURRENT SALE', 0
 payment_cash_label db 'PAY: CASH', 0
 payment_ebt_label db 'PAY: EBT', 0

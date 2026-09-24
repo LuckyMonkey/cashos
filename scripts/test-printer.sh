@@ -33,6 +33,8 @@ grep -Fq '^XA' "$tmp/zpl.txt"
 grep -Fq '^FDCASHOS^FS' "$tmp/zpl.txt"
 grep -Fq '^FDTX 1^FS' "$tmp/zpl.txt"
 grep -Fq '^FDEMP 1^FS' "$tmp/zpl.txt"
+grep -Fq '^FDCOFFEE^FS' "$tmp/zpl.txt"
+grep -Fq '^FD$3.25^FS' "$tmp/zpl.txt"
 grep -Fq '^FDTOTAL $3.25^FS' "$tmp/zpl.txt"
 grep -Fq '^XZ' "$tmp/zpl.txt"
 

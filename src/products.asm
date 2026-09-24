@@ -2,6 +2,7 @@
 ; Main register shortcuts: keys 1..4.
 %include "../build/catalog.inc"
 product_count equ catalog_count
+product_names equ catalog_names
 product_prices equ catalog_prices
 product_skus equ catalog_skus
 product_upcs equ catalog_upcs

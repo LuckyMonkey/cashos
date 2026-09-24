@@ -9,12 +9,15 @@ awk -F, '
 BEGIN { count = 0 }
 /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
 {
-    if ($1 !~ /^[0-9]+$/ || $3 !~ /^[0-9]+$/ || $1 > 99999 || $3 > 65535) {
+    if ($1 !~ /^[0-9]+$/ || $2 == "" || length($2) > 24 ||
+        index($2, "'") || index($2, "^") || index($2, "~") ||
+        $3 !~ /^[0-9]+$/ || $1 > 99999 || $3 > 65535) {
         print "invalid PLU row: " $0 > "/dev/stderr"
         exit 1
     }
     count++
     code[count] = $1
+    name[count] = $2
     price[count] = $3
 }
 END {
@@ -22,6 +25,10 @@ END {
     print "; Generated from data/fruit_plu.csv. Do not edit by hand."
     print "; 32-bit PLU codes support conventional and organic entries."
     print "plu_count equ " count
+    printf "plu_names dw "
+    for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "plu_name_%d", i }
+    print ""
+    for (i = 1; i <= count; i++) printf "plu_name_%d db '%s',0\n", i, name[i]
     printf "plu_codes  dd "
     for (i = 1; i <= count; i++) {
         if (i > 1 && (i - 1) % 10 != 0) printf ", "

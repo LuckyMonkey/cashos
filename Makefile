@@ -120,8 +120,8 @@ admin: image $(BUILD_DIR)/profile-tool
 	$(BUILD_DIR)/profile-tool --input $(IMAGE) --output $(BUILD_DIR)/admin.img --id 0 --name ADMIN --role admin
 	@echo "wrote $(BUILD_DIR)/admin.img"
 
-profile-test: image $(BUILD_DIR)/profile-tool
-	./scripts/test-profile.sh $(IMAGE) $(BUILD_DIR)/profile-tool
+profile-test: image $(BUILD_DIR)/profile-tool $(BUILD_DIR)/journal-dump
+	./scripts/test-profile.sh $(IMAGE) $(BUILD_DIR)/profile-tool $(BUILD_DIR)/journal-dump
 
 journal: image $(BUILD_DIR)/journal-dump
 	$(BUILD_DIR)/journal-dump $(IMAGE)

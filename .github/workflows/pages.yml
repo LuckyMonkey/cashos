@@ -26,6 +26,8 @@ jobs:
         run: make
       - name: Smoke-test CashOS
         run: make smoke
+      - name: Test employee/admin profiles
+        run: make profile-test
       - name: Build browser site
         run: make web
       - name: Validate site image

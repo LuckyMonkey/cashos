@@ -10,7 +10,7 @@ BEGIN { count = 0 }
 /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
 {
     if ($1 !~ /^[0-9]+$/ || $2 == "" || length($2) > 24 ||
-        index($2, "'") || index($2, "^") || index($2, "~") ||
+        index($2, sprintf("%c", 39)) || index($2, "^") || index($2, "~") ||
         $3 !~ /^[0-9]+$/ || $1 > 99999 || $3 > 65535) {
         print "invalid PLU row: " $0 > "/dev/stderr"
         exit 1
@@ -28,7 +28,7 @@ END {
     printf "plu_names dw "
     for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "plu_name_%d", i }
     print ""
-    for (i = 1; i <= count; i++) printf "plu_name_%d db '%s',0\n", i, name[i]
+    for (i = 1; i <= count; i++) printf "plu_name_%d db \\x27%s\\x27,0\n", i, name[i]
     printf "plu_codes  dd "
     for (i = 1; i <= count; i++) {
         if (i > 1 && (i - 1) % 10 != 0) printf ", "

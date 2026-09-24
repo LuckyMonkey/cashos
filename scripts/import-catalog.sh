@@ -10,7 +10,7 @@ BEGIN { count = 0 }
 /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
 {
     if ($1 !~ /^[1-9][0-9]*$/ || $2 == "" || length($2) > 24 ||
-        index($2, "'") || index($2, "^") || index($2, "~") ||
+        index($2, sprintf("%c", 39)) || index($2, "^") || index($2, "~") ||
         $3 !~ /^[0-9]+$/ || $4 !~ /^[0-9]+$/ || $5 !~ /^[0-9]{12}$/ ||
         $6 !~ /^[0-9]+$/ || $7 !~ /^[0-9]+$/ ||
         $8 !~ /^[0-1]$/ || $9 !~ /^[0-7]$/) {
@@ -35,7 +35,7 @@ END {
     printf "catalog_names dw "
     for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "catalog_name_%d", i }
     print ""
-    for (i = 1; i <= count; i++) printf "catalog_name_%d db '%s',0\n", i, name[i]
+    for (i = 1; i <= count; i++) printf "catalog_name_%d db \\x27%s\\x27,0\n", i, name[i]
     printf "catalog_prices dw "
     for (i = 1; i <= count; i++) { if (i > 1) printf ", "; printf "%s", price[i] }
     print ""

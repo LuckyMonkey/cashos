@@ -28,6 +28,8 @@ jobs:
         run: make smoke
       - name: Test employee/admin profiles
         run: make profile-test
+      - name: Test COM1/ZPL printer path
+        run: make printer-test
       - name: Build browser site
         run: make web
       - name: Validate site image

@@ -4,6 +4,11 @@
 %define APP_SECTORS             64
 %define APP_BYTES               (APP_SECTORS * SECTOR_SIZE)
 %define CONFIG_LBA              65
+%define CONFIG_MAGIC            0x31474643 ; bytes "CFG1"
+%define CONFIG_VERSION          1
+%define CONFIG_FLAG_PRINTER     0x01
+%define CONFIG_PRINTER_ZPL_SERIAL 1
+%define CONFIG_CHECKSUM_OFFSET 16
 %define PROFILE_LBA             66
 %define PROFILE_MAGIC            0x48534143 ; bytes "CASH"
 %define PROFILE_VERSION          1

@@ -5,9 +5,10 @@ CC ?= cc
 BUILD_DIR ?= build
 IMAGE := $(BUILD_DIR)/register.img
 APP_SECTORS := 64
-APP_BYTES := $(shell echo $$(( $(APP_SECTORS) * 512 )))
+APP_BYTES := $(shell echo $(( $(APP_SECTORS) * 512 )))
+BAUD ?= 9600
 
-.PHONY: all image run debug smoke qemu-screenshot guard-test disasm hex size layout journal journal-test journal-corrupt-test profile-test employee admin check web web-serve clean watch
+.PHONY: all image run debug smoke qemu-screenshot guard-test disasm hex size layout journal journal-test journal-corrupt-test profile-test printer-test employee admin printer-image check web web-serve clean watch
 
 all: image
 
@@ -23,7 +24,7 @@ $(BUILD_DIR)/fruit_plu.inc: data/fruit_plu.csv scripts/import-plu.sh | $(BUILD_D
 $(BUILD_DIR)/catalog.inc: data/catalog.csv scripts/import-catalog.sh | $(BUILD_DIR)
 	sh scripts/import-catalog.sh $< $@
 
-$(BUILD_DIR)/cashos.bin: src/main.asm src/vga.asm src/keyboard.asm src/products.asm src/money.asm src/profile.asm src/ui.asm src/disk.asm src/journal.asm data/fruit_plu.csv data/catalog.csv $(BUILD_DIR)/fruit_plu.inc $(BUILD_DIR)/catalog.inc include/constants.inc include/disk_layout.inc include/macros.inc | $(BUILD_DIR)
+$(BUILD_DIR)/cashos.bin: src/main.asm src/vga.asm src/keyboard.asm src/products.asm src/money.asm src/config.asm src/profile.asm src/serial.asm src/printer.asm src/ui.asm src/disk.asm src/journal.asm data/fruit_plu.csv data/catalog.csv $(BUILD_DIR)/fruit_plu.inc $(BUILD_DIR)/catalog.inc include/constants.inc include/disk_layout.inc include/macros.inc | $(BUILD_DIR)
 	$(NASM) -f bin -I src/ -I include/ -o $@ $<
 
 image: $(IMAGE)
@@ -98,7 +99,7 @@ layout: image
 	@stat -c 'image bytes: %s' $(IMAGE)
 	@echo 'LBA 0       boot sector'
 	@echo 'LBA 1-64    CashOS stage two'
-	@echo 'LBA 65       future configuration'
+	@echo 'LBA 65       machine configuration / serial printer'
 	@echo 'LBA 66       employee/profile sector'
 	@echo 'LBA 67-126   reserved'
 	@echo 'LBA 127      future journal metadata'
@@ -108,6 +109,9 @@ $(BUILD_DIR)/journal-dump: tools/journal_dump.c | $(BUILD_DIR)
 	$(CC) -std=c11 -Wall -Wextra -Werror -O2 -o $@ $<
 
 $(BUILD_DIR)/profile-tool: tools/profile_tool.c | $(BUILD_DIR)
+	$(CC) -std=c11 -Wall -Wextra -Werror -O2 -o $@ $<
+
+$(BUILD_DIR)/config-tool: tools/config_tool.c | $(BUILD_DIR)
 	$(CC) -std=c11 -Wall -Wextra -Werror -O2 -o $@ $<
 
 employee: image $(BUILD_DIR)/profile-tool
@@ -120,8 +124,19 @@ admin: image $(BUILD_DIR)/profile-tool
 	$(BUILD_DIR)/profile-tool --input $(IMAGE) --output $(BUILD_DIR)/admin.img --id 0 --name ADMIN --role admin
 	@echo "wrote $(BUILD_DIR)/admin.img"
 
+printer-image: image $(BUILD_DIR)/profile-tool $(BUILD_DIR)/config-tool
+	@test -n "$(NAME)" || { echo 'usage: make printer-image NAME=CHARLIE ID=1 [BAUD=9600]'; exit 1; }
+	@test -n "$(ID)" || { echo 'usage: make printer-image NAME=CHARLIE ID=1 [BAUD=9600]'; exit 1; }
+	$(BUILD_DIR)/profile-tool --input $(IMAGE) --output $(BUILD_DIR)/printer-profile.img --id $(ID) --name "$(NAME)" --role operator
+	$(BUILD_DIR)/config-tool --input $(BUILD_DIR)/printer-profile.img --output $(BUILD_DIR)/printer.img --printer zpl --baud $(BAUD)
+	rm -f $(BUILD_DIR)/printer-profile.img
+	@echo "wrote $(BUILD_DIR)/printer.img"
+
 profile-test: image $(BUILD_DIR)/profile-tool $(BUILD_DIR)/journal-dump
 	./scripts/test-profile.sh $(IMAGE) $(BUILD_DIR)/profile-tool $(BUILD_DIR)/journal-dump
+
+printer-test: image $(BUILD_DIR)/profile-tool $(BUILD_DIR)/config-tool $(BUILD_DIR)/journal-dump
+	./scripts/test-printer.sh $(IMAGE) $(BUILD_DIR)/profile-tool $(BUILD_DIR)/config-tool $(BUILD_DIR)/journal-dump
 
 journal: image $(BUILD_DIR)/journal-dump
 	$(BUILD_DIR)/journal-dump $(IMAGE)
@@ -139,6 +154,7 @@ check: clean
 	$(MAKE) journal-test
 	$(MAKE) journal-corrupt-test
 	$(MAKE) profile-test
+	$(MAKE) printer-test
 	$(MAKE) disasm size
 
 clean:

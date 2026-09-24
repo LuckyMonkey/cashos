@@ -344,6 +344,7 @@ draw_register:
     mov bl, COLOR_NORMAL
     call vga_write_at
     call journal_show_status
+    call printer_draw_status
     ret
 
 write_small_number:
@@ -965,6 +966,9 @@ complete_sale:
     mov ax, [transaction_number]
     call debug_u16
     DEBUG_STRING debug_newline
+    ; Persistence succeeded first. Printing is best-effort and cannot roll
+    ; back a transaction already committed to the raw journal.
+    call printer_print_sale
     call clear_sale
     ret
 .journal_error:

@@ -47,6 +47,7 @@ Build a configured operator image with:
 make printer-image NAME=CHARLIE ID=1 BAUD=9600
 ```
 
-This produces `build/printer.img`. `make printer-test` provisions a temporary operator/configured image, boots it in QEMU, captures COM1 to a host file, completes a $3.25 transaction, verifies the raw ZPL stream, and independently checks that the journal still contains the sale with the employee ID.
+This produces `build/printer.img`. `make printer-test` provisions a temporary operator/configured image, boots it in QEMU, captures COM1 to a host file, completes a $3.25 Coffee transaction, verifies the raw ZPL stream contains the item name, item price, total, transaction ID, and employee ID, and independently checks that the journal still contains the sale.
 
 The UART sequence is intentionally visible rather than abstracted away: COM1+1 disables UART interrupts; COM1+3 sets DLAB; COM1/COM1+1 receive the divisor; COM1+3 selects 8N1; COM1+2 configures the FIFO; COM1+4 asserts DTR/RTS; COM1+5 exposes the line-status register. Bit 5 of that status register means the transmit holding register is empty and can accept another byte.
+\nCatalog and PLU importers also compile safe display-name pointer tables for the receipt path. Names containing `^` or `~` are rejected because those characters are ZPL control introducers; apostrophes are rejected to keep generated NASM string literals unambiguous.\n
